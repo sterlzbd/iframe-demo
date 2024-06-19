@@ -1,26 +1,27 @@
-require "roda"
+# frozen_string_literal: true
+
+require 'roda'
 
 class App < Roda
-  START = "/frame/page/10"
 
-  def home
-    <<~HOME
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Test driver</title>
-        </head>
-        <body>
-          <iframe id="inlineFrameExample"
-            title="Inline Frame Example"
-            width="300"
-            height="200"
-            src='#{START}'>
-          </iframe>
-        </body>
-      </html>
-    HOME
-  end
+  START = '/frame/page/1'
+  HOME = <<~HOME.freeze
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Test driver</title>
+      </head>
+      <body>
+        <iframe id="inlineFrameExample"
+          title="Inline Frame Example"
+          width="300"
+          height="200"
+          src='#{START}'>
+        </iframe>
+        <a href='/frame'">Start</a>
+      </body>
+    </html>
+  HOME
 
   def document(page)
     <<~DOC
@@ -30,15 +31,11 @@ class App < Roda
           <title>
             Frame
           </title>
-          <script>
-            function reloadWith(i) {
-              window.location.href = '/frame/page/' + i;
-            }
-          </script>
         </head>
         <body>
-          <button id='prev' onclick="reloadWith(#{page - 1})">-1</button>
-          <button id='next' onclick="reloadWith(#{page + 1})">+1</button>
+          <a id='next' href='/frame/page/#{page + 1}'">+1</a>
+          <a id='next-slow' href='/frame/page/#{page + 1}?slow'">+1 (slow)</a>
+          <a id='restart' href='#{START}'">Restart</a>
           <p id='valueToRead'>#{page}</p>
         </body>
       </html>
@@ -46,9 +43,13 @@ class App < Roda
   end
 
   route do |r|
+    # If the responses are fast enough the issue of not waiting for navigation
+    # is less consistently testable.
+    sleep 0.2 if r.params.key?('slow')
+
     r.on do
-      r.on "frame" do
-        r.on "page" do
+      r.on 'frame' do
+        r.on 'page' do
           r.get Integer do |i|
             document i
           end
@@ -59,12 +60,12 @@ class App < Roda
         end
 
         r.get do
-          home
+          HOME
         end
       end
 
       r.get do
-        r.redirect "/frame"
+        r.redirect '/frame'
       end
     end
   end
